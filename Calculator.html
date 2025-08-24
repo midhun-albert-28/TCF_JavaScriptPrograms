@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculator — Dark/Light Mode</title>
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --key: #e5e7eb;
+      --key-hover: #d1d5db;
+      --accent: #4f46e5;
+      --accent-contrast: #ffffff;
+      --danger: #ef4444;
+      --shadow: 0 10px 25px rgba(2, 6, 23, 0.08);
+      --ring: 0 0 0 3px rgba(79, 70, 229, 0.35);
+    }
+    [data-theme="dark"] {
+      --bg: #0b1220;
+      --panel: #0f172a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --key: #1f2937;
+      --key-hover: #334155;
+      --accent: #7c3aed;
+      --accent-contrast: #ffffff;
+      --danger: #f87171;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      --ring: 0 0 0 3px rgba(124, 58, 237, 0.45);
+    }
+
+    /* Global styles */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(79,70,229,0.08), transparent 60%),
+                  radial-gradient(1200px 800px at 120% 110%, rgba(124,58,237,0.08), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .title {
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      font-size: 18px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .theme-toggle {
+      border: none;
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+    .theme-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
+    .theme-toggle svg { width: 18px; height: 18px; }
+
+    .calculator {
+      background: var(--panel);
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(100,116,139,0.15);
+    }
+
+    .display {
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(2,6,23,0.04), transparent);
+      padding: 16px;
+      text-align: right;
+      min-height: 84px;
+      display: grid;
+      align-content: center;
+      word-break: break-all;
+      border: 1px solid rgba(100,116,139,0.15);
+    }
+    .display .history { color: var(--muted); font-size: 12px; min-height: 16px; }
+    .display .value { font-size: 32px; line-height: 1.2; font-weight: 700; }
+
+    .keys {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .key {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--key);
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 600;
+      transition: transform 120ms ease, background-color 120ms ease, filter 120ms ease;
+      user-select: none;
+    }
+    .key:hover { background: var(--key-hover); }
+    .key:active { transform: translateY(1px); filter: brightness(0.97); }
+    .key:focus-visible { outline: none; box-shadow: var(--ring); }
+
+    .key.operator { background: linear-gradient(180deg, rgba(79,70,229,0.12), transparent), var(--key); }
+    .key.operator:hover { background: linear-gradient(180deg, rgba(79,70,229,0.18), transparent), var(--key-hover); }
+
+    .key.action { background: linear-gradient(180deg, rgba(239,68,68,0.12), transparent), var(--key); }
+    .key.action:hover { background: linear-gradient(180deg, rgba(239,68,68,0.18), transparent), var(--key-hover); }
+
+    .key.equal {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      grid-column: span 2;
+    }
+    .key.equal:hover { filter: brightness(1.05); }
+
+    .key.zero { grid-column: span 2; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    footer { margin-top: 16px; text-align: center; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Calculator app">
+    <div class="header">
+      <h1 class="title">Calculator</h1>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark or light mode">
+        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zm10.48 0l1.79-1.8 1.41 1.41-1.8 1.79-1.4-1.4zM12 4V1h-0v3h0zm0 19v-3h0v3h0zM4 12H1v0h3v0zm19 0h-3v0h3v0zM6.76 19.16l-1.42 1.42-1.79-1.8 1.41-1.41 1.8 1.79zm12.89-1.79l1.41 1.41-1.79 1.8-1.42-1.42 1.8-1.79zM12 7a5 5 0 100 10A5 5 0 0012 7z"/></svg>
+        <svg id="iconMoon" style="display:none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.64 13a9 9 0 11-10.63-10.6 1 1 0 011.18 1.17A7 7 0 0020.47 12a1 1 0 011.17 1 1 1 0 01-.01 0z"/></svg>
+        <span id="themeLabel" aria-live="polite">Auto</span>
+      </button>
+    </div>
+
+    <section class="calculator" role="application" aria-label="Basic calculator">
+      <div class="display" aria-live="polite">
+        <div class="history" id="history">&nbsp;</div>
+        <div class="value" id="display">0</div>
+      </div>
+      <div class="keys" role="group" aria-label="Calculator keys">
+        <button class="key action" data-action="clear" aria-label="All Clear">AC</button>
+        <button class="key action" data-action="backspace" aria-label="Delete last digit">⌫</button>
+        <button class="key action" data-action="sign" aria-label="Toggle sign">±</button>
+        <button class="key operator" data-operator="/" aria-label="Divide">÷</button>
+
+        <button class="key" data-digit="7">7</button>
+        <button class="key" data-digit="8">8</button>
+        <button class="key" data-digit="9">9</button>
+        <button class="key operator" data-operator="*" aria-label="Multiply">×</button>
+
+        <button class="key" data-digit="4">4</button>
+        <button class="key" data-digit="5">5</button>
+        <button class="key" data-digit="6">6</button>
+        <button class="key operator" data-operator="-" aria-label="Subtract">−</button>
+
+        <button class="key" data-digit="1">1</button>
+        <button class="key" data-digit="2">2</button>
+        <button class="key" data-digit="3">3</button>
+        <button class="key operator" data-operator="+" aria-label="Add">+</button>
+
+        <button class="key zero" data-digit="0">0</button>
+        <button class="key" data-decimal=".">.</button>
+        <button class="key equal" data-action="equals" aria-label="Equals">=</button>
+      </div>
+    </section>
+
+    <footer>
+      Keyboard: 0-9, ., + − × ÷, Enter (=), Backspace, C/ESC (clear)
+    </footer>
+  </main>
+
+  <script>
+    // THEME HANDLING ---------------------------------------------------------
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+    const iconSun = document.getElementById('iconSun');
+    const iconMoon = document.getElementById('iconMoon');
+    const root = document.documentElement;
+
+    function applyTheme(mode) {
+      // mode: 'light' | 'dark' | 'auto'
+      if (mode === 'auto') {
+        root.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } else {
+        root.setAttribute('data-theme', mode);
+      }
+      themeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      iconSun.style.display = isDark ? 'none' : '';
+      iconMoon.style.display = isDark ? '' : 'none';
+    }
+
+    const savedTheme = localStorage.getItem('calc-theme') || 'auto';
+    applyTheme(savedTheme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if ((localStorage.getItem('calc-theme') || 'auto') === 'auto') applyTheme('auto');
+    });
+
+    themeToggle.addEventListener('click', () => {
+      const current = localStorage.getItem('calc-theme') || 'auto';
+      const next = current === 'auto' ? 'dark' : current === 'dark' ? 'light' : 'auto';
+      localStorage.setItem('calc-theme', next);
+      applyTheme(next);
+    });
+
+    // CALCULATOR LOGIC -------------------------------------------------------
+    const display = document.getElementById('display');
+    const history = document.getElementById('history');
+    const keys = document.querySelector('.keys');
+
+    const state = {
+      displayValue: '0',
+      firstOperand: null,
+      operator: null,
+      waitingForSecondOperand: false,
+      lastPressed: null,
+    };
+
+    function updateDisplay() {
+      display.textContent = state.displayValue;
+      const h = [state.firstOperand, state.operator].filter(Boolean).join(' ');
+      history.textContent = h || '\u00A0';
+    }
+
+    function inputDigit(d) {
+      if (state.waitingForSecondOperand) {
+        state.displayValue = d;
+        state.waitingForSecondOperand = false;
+      } else {
+        state.displayValue = state.displayValue === '0' ? d : state.displayValue + d;
+      }
+    }
+
+    function inputDecimal() {
+      if (state.waitingForSecondOperand) {
+        state.displayValue = '0.';
+        state.waitingForSecondOperand = false;
+        return;
+      }
+      if (!state.displayValue.includes('.')) state.displayValue += '.';
+    }
+
+    function toggleSign() {
+      if (state.displayValue === '0') return;
+      state.displayValue = state.displayValue.startsWith('-') ? state.displayValue.slice(1) : '-' + state.displayValue;
+    }
+
+    function clearAll() {
+      state.displayValue = '0';
+      state.firstOperand = null;
+      state.operator = null;
+      state.waitingForSecondOperand = false;
+    }
+
+    function backspace() {
+      if (state.waitingForSecondOperand) return; // don't backspace placeholder
+      state.displayValue = state.displayValue.length > 1 ? state.displayValue.slice(0, -1) : '0';
+    }
+
+    function roundSmart(n) {
+      // Avoid floating artifacts like 0.30000000000000004
+      const s = Number(n).toPrecision(14);
+      return parseFloat(s).toString();
+    }
+
+    const operations = {
+      '+': (a,b) => a + b,
+      '-': (a,b) => a - b,
+      '*': (a,b) => a * b,
+      '/': (a,b) => b === 0 ? NaN : a / b,
+    };
+
+    function handleOperator(nextOperator) {
+      const inputValue = parseFloat(state.displayValue);
+
+      if (state.operator && state.waitingForSecondOperand) {
+        // Replace operator if user changes mind before typing second operand
+        state.operator = nextOperator;
+        return;
+      }
+
+      if (state.firstOperand === null) {
+        state.firstOperand = inputValue;
+      } else if (state.operator) {
+        const result = operations[state.operator](state.firstOperand, inputValue);
+        state.displayValue = Number.isFinite(result) ? roundSmart(result) : 'Error';
+        state.firstOperand = Number.isFinite(result) ? parseFloat(state.displayValue) : null;
+      }
+
+      state.operator = nextOperator;
+      state.waitingForSecondOperand = true;
+    }
+
+    function handleEquals() {
+      if (state.operator === null || state.waitingForSecondOperand) return;
+      const inputValue = parseFloat(state.displayValue);
+      const result = operations[state.operator](state.firstOperand, inputValue);
+      state.displayValue = Number.isFinite(result) ? roundSmart(result) : 'Error';
+      state.firstOperand = Number.isFinite(result) ? parseFloat(state.displayValue) : null;
+      state.operator = null;
+      state.waitingForSecondOperand = false;
+    }
+
+    function handleKey(value, type = 'click') {
+      if (/^[0-9]$/.test(value)) {
+        inputDigit(value);
+      } else if (value === '.') {
+        inputDecimal();
+      } else if (['+','-','*','/'].includes(value)) {
+        handleOperator(value);
+      } else if (value === '=') {
+        handleEquals();
+      } else if (value === 'clear') {
+        clearAll();
+      } else if (value === 'back') {
+        backspace();
+      } else if (value === 'sign') {
+        toggleSign();
+      }
+      updateDisplay();
+      state.lastPressed = type;
+    }
+
+    keys.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.digit) return handleKey(btn.dataset.digit);
+      if (btn.dataset.decimal) return handleKey('.');
+      if (btn.dataset.operator) return handleKey(btn.dataset.operator);
+      const action = btn.dataset.action;
+      if (action === 'equals') return handleKey('=');
+      if (action === 'clear') return handleKey('clear');
+      if (action === 'backspace') return handleKey('back');
+      if (action === 'sign') return handleKey('sign');
+    });
+
+    // Keyboard support
+    window.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (/^[0-9]$/.test(key)) return handleKey(key, 'key');
+      if (key === '.' ) return handleKey('.', 'key');
+      if (key === '+' || key === '-' || key === '*' || key === '/') return handleKey(key, 'key');
+      if (key === 'Enter' || key === '=') return handleKey('=', 'key');
+      if (key === 'Backspace') return handleKey('back', 'key');
+      if (key.toLowerCase() === 'c' || key === 'Escape') return handleKey('clear', 'key');
+    });
+
+    // Initialize
+    updateDisplay();
+  </script>
+</body>
+</html>
